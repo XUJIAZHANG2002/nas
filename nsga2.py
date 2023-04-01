@@ -17,7 +17,7 @@ class NSGA_2:
        3, 3, 3, 3])
 
         self.problem = problem
-        self.banchmark = benchmark
+        self.benchmark = benchmark
         self.len_dna = problem.n_var
         self.n_objs = problem.n_obj
 
@@ -46,16 +46,23 @@ class NSGA_2:
         return Q
     
     def select(self,R):
-        sorted(R)
+        R = sorted(R)
+        # print("sorted -------------------------------------------")
+        # for item in R:
+
+            # item.print_info()
         return R[:self.pop_size]
     
     def calculate_f(self,population):
+        # print(len(population),"------------")
         self.F = np.zeros((len(population),self.n_objs))
-        for idx in range(len(self.population)):
+        for idx in range(len(population)):
 
-            dna = np.reshape(self.population[idx].dna,(1,-1))
-            f = self.banchmark.evaluate(dna)[0]
-            self.population[idx].f = f
+            dna = np.reshape(population[idx].dna,(1,-1))
+            # print(dna)
+            f = self.benchmark.evaluate(dna)
+            # print(idx,f)
+            population[idx].f = f[0]
     def fast_non_dominated_sort(self,population):
         n = np.zeros(len(population))  
         S = []  
@@ -129,59 +136,78 @@ class NSGA_2:
 
 
     def run(self,max_iteration):
-        
+        res = np.zeros((100,(self.len_dna)))
         P = self.init_pop(self.pop_size)
         self.calculate_f(P)
         F = self.fast_non_dominated_sort(P)
         self.crowding_distance_pop(F)
         R = P
-        # for i in range(len(F)):
-        #     for j in range(len(F[i])):
-        #         F[i][j].print_info()
-        # for i in range(len(P)):
-        #     P[i].print_info()
-        res = np.zeros((len(P),len(P[0].dna)))
-        for idx in range(len(P)):
-            res[idx] = P[idx].dna
+        
+        for idx in range(len(res)):
+            res[idx] = R[idx].dna
         res = res.astype('int')
-        hv = self.banchmark.calc_perf_indicator(res, 'hv')
-        r1 = res
+        hv = self.benchmark.calc_perf_indicator(res, 'hv')
+        
         print(hv)
-        for i in r1:
-            print(i)
         print("------------------------------------------------------")
-        Q = self.pop_cross(P)
-        Q = self.pop_mutation(Q)
-        R = np.concatenate((P,Q))
-        
-        self.calculate_f(R)
-        F = self.fast_non_dominated_sort(R)
-        self.crowding_distance_pop(F)
-        P = self.select(R)
-        for item in R:
-            item.print_info()
-        # for i in range(len(P)):
-        #     P[i].print_info()
-        res = np.zeros((len(P),len(P[0].dna)))
-        for idx in range(len(P)):
-            res[idx] = P[idx].dna
-        r2 = res
-        res = res.astype('int')
-        
-        for i in res:
-            print(i)
-        hv = self.banchmark.calc_perf_indicator(res, 'hv')
-        print(hv)
+        l = []
+        maxnum = 0
+        for iter in range(100):
+            Q = self.pop_cross(P)
+            Q = self.pop_mutation(Q)
+            R = np.concatenate((P,Q))
+            
+            # print(res)
+            for individual in R:
+                individual.rank = -1
+                individual.crowding_dist = -1
+                individual.f = np.zeros((self.n_objs))
+            self.calculate_f(R)
 
-        print((res==r1))
-        cnt = 0
-        for i in range(100):
-            if (res[i] == r1[i]).all():
-                print("True")
-                cnt+=1
-            else:
-                print('False')
-        print(cnt)
+            F = self.fast_non_dominated_sort(R)
+            self.crowding_distance_pop(F)
+            # for item in R:
+            #     item.print_info()
+            P = self.select(R)
+
+            res = np.zeros((len(P),len(P[0].dna)))
+            for idx in range(len(P)):
+                res[idx] = P[idx].dna
+
+            res = res.astype('int')
+            # print(res)
+            
+            rank0 = []
+            for i in range(len(P)):
+                if P[i].rank == 0:
+                    rank0.append(P[i].dna)
+            print(len(rank0),"length of rank0")
+            hv = self.benchmark.calc_perf_indicator(res, 'hv')
+            rank0 = np.array(rank0)
+            rank0 = rank0.astype('int')
+            hv2 = self.benchmark.calc_perf_indicator(rank0,'hv')
+            if hv > maxnum:
+                maxnum = hv
+            # print(hv,"hv of all")
+            l.append(maxnum)
+
+        import matplotlib.pyplot as plt
+        x = np.arange(100)
+        y = np.array(l)
+        plt.plot(x,y)
+        plt.xlabel('iteration') 
+        plt.ylabel('hv')   
+
+        plt.show()
+        print(maxnum)
+        return res
+    
+        # res = res.astype('int')
+        
+        # for i in res:
+        #     print(i)
+        # hv = self.banchmark.calc_perf_indicator(res, 'hv')
+        # print(hv)
         # for i in range(max_iteration):
         #     print(i)
         #     P = self.select(R)
