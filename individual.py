@@ -31,7 +31,7 @@ class Individual:
         idx = np.random.randint(0,len(self.dna))
         l = lower[idx]
         r = upper[idx]
-        self.dna[idx] = np.random.rand()*(r-l)+r
+        self.dna[idx] = np.random.rand()*(r-l)+l
         return self.dna
     
     def cross_over(self,p1,p2,random_init,lower,upper,dna,n_objs):
